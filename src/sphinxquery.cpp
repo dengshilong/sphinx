@@ -23,7 +23,11 @@
 // EXTENDED PARSER RELOADED
 //////////////////////////////////////////////////////////////////////////
 class XQParser_t;
-#include "yysphinxquery.h"
+#ifdef CMAKE_GENERATED_GRAMMAR
+	#include "bissphinxquery.h"
+#else
+	#include "yysphinxquery.h"
+#endif
 
 // #define XQDEBUG 1
 // #define XQ_DUMP_TRANSFORMED_TREE 1
@@ -169,7 +173,12 @@ void yyerror ( XQParser_t * pParser, const char * sMessage )
 #pragma warning(disable:4702) // unreachable code
 #endif
 
-#include "yysphinxquery.c"
+#ifdef CMAKE_GENERATED_GRAMMAR
+	#include "bissphinxquery.c"
+#else
+	#include "yysphinxquery.c"
+#endif
+
 
 #if USE_WINDOWS
 #pragma warning(pop)
@@ -1022,6 +1031,14 @@ int XQParser_t::GetToken ( YYSTYPE * lvalp )
 					continue;
 				if ( sphIsSpace ( m_pTokenizer->GetTokenStart() [ -1 ] ) )
 					continue;
+
+				// right after overshort
+				if ( m_pTokenizer->GetOvershortCount()==1 )
+				{
+					m_iPendingNulls = 0;
+					lvalp->pNode = AddKeyword ( NULL, iSkippedPosBeforeToken );
+					return TOK_KEYWORD;
+				}
 
 				Warning ( "modifiers must be applied to keywords, not operators" );
 
@@ -4254,18 +4271,18 @@ void CSphTransformation::Dump ()
 	m_hSimilar.IterateStart();
 	while ( m_hSimilar.IterateNext() )
 	{
-		printf ( "\nnode: hash 0x"UINT64_FMT"\n", m_hSimilar.IterateGetKey() );
+		printf ( "\nnode: hash 0x" UINT64_FMT "\n", m_hSimilar.IterateGetKey() );
 		m_hSimilar.IterateGet().IterateStart();
 		while ( m_hSimilar.IterateGet().IterateNext() )
 		{
 			CSphVector<XQNode_t *> & dNodes = m_hSimilar.IterateGet().IterateGet();
-			printf ( "\tgrand: hash 0x"UINT64_FMT", children %d\n", m_hSimilar.IterateGet().IterateGetKey(), dNodes.GetLength() );
+			printf ( "\tgrand: hash 0x" UINT64_FMT ", children %d\n", m_hSimilar.IterateGet().IterateGetKey(), dNodes.GetLength() );
 
 			printf ( "\tparents:\n" );
 			ARRAY_FOREACH ( i, dNodes )
 			{
 				uint64_t uParentHash = dNodes[i]->GetHash();
-				printf ( "\t\thash 0x"UINT64_FMT"\n", uParentHash );
+				printf ( "\t\thash 0x" UINT64_FMT "\n", uParentHash );
 			}
 		}
 	}
